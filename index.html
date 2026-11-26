@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>수행평가 서명 확인</title>
+<title>학생 점수 확인 서명 프로그램</title>
 <!--
-  수행평가 점수 확인 서명 (한 파일, 인터넷·설치 필요 없음)
-  - 나이스 '수행평가 강의실별 일람표' 엑셀(.xlsx)을 올리면 학생별 점수를 보여 주고 펜 서명을 받는다.
+  학생 점수 확인 서명 프로그램 (한 파일, 인터넷·설치 필요 없음)
+  - 나이스 '수행평가 강의실별 일람표' 또는 '정기시험 교과목별 일람표' PDF를 올리면 학생별 점수를 보여 주고 펜 서명을 받는다.
   - 서명은 이 컴퓨터의 브라우저 저장소(IndexedDB)에 남는다. 다른 컴퓨터로 옮겨지지 않는다.
-  - 결과: 비고 칸에 서명을 넣은 엑셀 내려받기 / 인쇄(PDF로 저장) / 서명 그림 묶음(zip) 내려받기.
+  - 결과: 올린 PDF의 비고 칸에 서명을 넣은 PDF 저장·인쇄 / 서명 그림 묶음(zip) 내려받기.
   - Edge 또는 Chrome에서 연다.
 -->
 <style>
@@ -74,6 +74,10 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
 /* 서명 칸은 화면에 남은 공간을 꽉 채움(가로·세로·PC 모두) */
 #pad{display:block;position:absolute;inset:0;width:100%;height:100%;border:2px dashed var(--line);border-radius:12px;touch-action:none;cursor:crosshair;
   background:linear-gradient(to top, transparent 22%, #c7c7cc 22%, #c7c7cc calc(22% + 1px), transparent calc(22% + 1px))}
+/* 서명 칸 뒤에 깔리는 흐린 안내 글씨(서명 그림·PDF에는 들어가지 않음) */
+.ghost{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:12px}
+.ghost .gname{color:#e3e3e8;font-weight:700;letter-spacing:.15em;white-space:nowrap;font-family:"Malgun Gothic","맑은 고딕",sans-serif}
+.ghost .gtip{position:absolute;left:14px;top:10px;color:#aeaeb2;font-size:14px}
 .saved{position:absolute;inset:0;background:rgba(255,255,255,.96);border-radius:12px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .saved.on{display:flex}
 .saved img{max-height:62%;max-width:70%}
@@ -135,34 +139,18 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 20px;border-radius:12px;font-size:16px;display:none;z-index:20}
 .toast.on{display:block}
 
-/* 인쇄 화면 */
-#sPrint{background:#888;min-height:100vh;padding:20px}
-.ptools{position:sticky;top:0;display:flex;gap:10px;justify-content:center;margin-bottom:16px;z-index:5}
-.page{background:#fff;width:210mm;height:296mm;margin:0 auto 16px;position:relative;overflow:hidden}
-.page .sheet{position:absolute;left:0;top:0;transform-origin:0 0}
-table.xl{border-collapse:collapse;table-layout:fixed;font-family:"굴림","Gulim","Malgun Gothic",sans-serif;color:#000}
-table.xl td{padding:0 2px;overflow:hidden;white-space:nowrap;vertical-align:bottom;line-height:1.1}
-table.xl td.wrap{white-space:normal;word-break:keep-all}
-table.xl td img{display:block;margin:0 auto;max-width:100%;max-height:100%}
-@media print{
-  @page{size:A4 portrait;margin:0}
-  body{background:#fff}
-  .screen:not(#sPrint),.ptools,.toast,.modal{display:none!important}
-  #sPrint{display:block!important;padding:0;background:#fff}
-  .page{margin:0;page-break-after:always;box-shadow:none}
-}
 </style>
 </head>
 <body>
 
 <!-- 시작: 일람표 올리기 -->
 <section class="screen on" id="sHome">
-  <h1>수행평가 점수 확인 서명</h1>
-  <div class="sub">나이스에서 받은 반별 「수행평가 강의실별 일람표」나 「정기시험 교과목별 일람표」 <b>PDF</b>를 올리세요(수행평가는 엑셀도 됩니다). 여러 반을 한꺼번에 올려도 됩니다.</div>
+  <h1>학생 점수 확인 서명 프로그램</h1>
+  <div class="sub" style="font-size:16px">나이스에서 내려받은 <b>정기시험 일람표</b> 또는 <b>수행평가 일람표</b>(PDF)를 올려 주세요. 여러 반을 한꺼번에 올려도 됩니다.</div>
   <label class="drop" id="drop">
-    <b>여기에 일람표 PDF를 끌어다 놓거나, 눌러서 고르세요</b><br>
-    <span class="sub">.pdf (또는 .xlsx) · 파일은 이 컴퓨터 안에서만 읽고 어디에도 보내지 않습니다</span>
-    <input type="file" id="fileIn" accept=".pdf,.xlsx" multiple hidden>
+    <b>정기시험 일람표 또는 수행평가 일람표를 올려 주세요</b><br><span class="sub">여기에 PDF를 끌어다 놓거나, 눌러서 고르세요</span><br>
+    <span class="sub">PDF 파일은 이 기기 안에서만 읽고 어디에도 보내지 않습니다</span>
+    <input type="file" id="fileIn" accept=".pdf,application/pdf" multiple hidden>
   </label>
   <div class="classes" id="classes"></div>
   <div class="help">
@@ -170,7 +158,7 @@ table.xl td img{display:block;margin:0 auto;max-width:100%;max-height:100%}
     점수가 다르다는 학생은 <b>이의</b>로, 서명을 받을 수 없는 학생(결석·전출·자퇴 등)은 <b>서명 못 받음</b>으로 사유를 기록합니다(비고 칸에 그 글자가 들어감).
     그날 없는 학생은 <b>건너뛰기 · 다음에</b>를 누르면 비워 둔 채 넘어가고, 다음에 <b>서명 시작</b>을 누르면 남은 학생부터 이어집니다.<br>
     <b>결과</b> 반 화면의 <b>서명 PDF 저장</b>은 올린 나이스 PDF의 비고 칸에 서명을 넣어 파일로 저장하고, <b>서명 PDF 인쇄</b>는 바로 인쇄 창을 엽니다(쪽번호·학교 이름 등 원본 그대로).
-    <b>서명 그림 받기</b>는 학생별 PNG를 zip으로 내려받습니다. 엑셀로 올린 반은 <b>엑셀 받기</b>·<b>간이 인쇄</b>도 쓸 수 있습니다.<br>
+    <b>서명 그림 받기</b>는 학생별 PNG를 zip으로 내려받습니다.<br>
     <b>저장</b> 서명은 이 기기의 이 브라우저에 저장됩니다(창을 닫아도 남음). 브라우저 기록을 지우거나 다른 기기에서 열면 보이지 않으니, 끝나면 서명 PDF를 저장해 두세요.
   </div>
 </section>
@@ -184,9 +172,6 @@ table.xl td img{display:block;margin:0 auto;max-width:100%;max-height:100%}
     <button onclick="openAll()">전체 보기</button>
     <button class="primary" id="btnPdf" onclick="pdfButton('save')">서명 PDF 저장</button>
     <button class="primary" id="btnPdfPrint" onclick="pdfButton('print')">서명 PDF 인쇄</button>
-    <input type="file" id="pdfIn" accept=".pdf" hidden>
-    <button id="btnXlsx" onclick="downloadXlsx()">엑셀 받기</button>
-    <button id="btnPrint" onclick="openPrint()">간이 인쇄</button>
     <button onclick="downloadZip()">서명 그림 받기</button>
     <button class="danger" onclick="clearClass()">반 서명 초기화</button>
   </div>
@@ -197,6 +182,7 @@ table.xl td img{display:block;margin:0 auto;max-width:100%;max-height:100%}
       <div class="padhead"><span><b>위 점수를 확인했습니다.</b> 동의하면 아래 칸에 서명하세요.</span>
         <button onclick="clearPad()">다시 쓰기</button></div>
       <div class="padwrap">
+        <div class="ghost" id="ghost" aria-hidden="true"><span class="gtip">여기에 본인 이름을 정자로 작성하세요.</span><span class="gname" id="ghostName"></span></div>
         <canvas id="pad"></canvas>
         <div class="saved" id="saved"><div class="lab" id="savedLab"></div><img id="savedImg" alt=""><div class="row"><button onclick="resign()">다시 서명하기</button><button class="danger" onclick="clearOne()">이 학생 서명 초기화</button></div></div>
       </div>
@@ -214,15 +200,6 @@ table.xl td img{display:block;margin:0 auto;max-width:100%;max-height:100%}
       <button class="primary" id="btnNext" onclick="saveNext()">저장하고 다음 ▶</button>
     </div>
   </div>
-</section>
-
-<!-- 인쇄 미리보기 -->
-<section class="screen" id="sPrint">
-  <div class="ptools">
-    <button onclick="closePrint()">◀ 돌아가기</button>
-    <button class="primary" onclick="window.print()">인쇄 / PDF로 저장</button>
-  </div>
-  <div id="pages"></div>
 </section>
 
 <div class="modal" id="mObj"><div class="dlg">
@@ -256,25 +233,7 @@ function toast(m, ms=2000){ const t=$('toast'); t.textContent=m; t.classList.add
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); }
 function closeM(id){ $(id).classList.remove('on'); }
 
-/* ───────── ZIP 읽기·쓰기 (브라우저 내장 압축 해제 사용) ───────── */
-async function unzip(buf){
-  const u8=new Uint8Array(buf), dv=new DataView(buf); let e=-1;
-  for(let i=u8.length-22;i>=Math.max(0,u8.length-65557);i--){ if(dv.getUint32(i,true)===0x06054b50){ e=i; break; } }
-  if(e<0) throw new Error('엑셀(xlsx) 파일이 아닙니다.');
-  const n=dv.getUint16(e+10,true); let p=dv.getUint32(e+16,true); const files={}; const td=new TextDecoder();
-  for(let k=0;k<n;k++){
-    const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true), nlen=dv.getUint16(p+28,true), xlen=dv.getUint16(p+30,true), clen=dv.getUint16(p+32,true), off=dv.getUint32(p+42,true);
-    const name=td.decode(u8.subarray(p+46,p+46+nlen));
-    const lnl=dv.getUint16(off+26,true), lxl=dv.getUint16(off+28,true);
-    const data=u8.subarray(off+30+lnl+lxl, off+30+lnl+lxl+csize);
-    let out;
-    if(method===0) out=data.slice();
-    else if(method===8) out=new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
-    else throw new Error('지원하지 않는 압축 방식');
-    files[name]=out; p+=46+nlen+xlen+clen;
-  }
-  return files;
-}
+/* ───────── ZIP 쓰기 (서명 그림 묶음용, 압축 없이 저장) ───────── */
 const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
 function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
 function zip(files){   // {이름: Uint8Array} → Blob (압축 없이 저장)
@@ -293,87 +252,6 @@ function zip(files){   // {이름: Uint8Array} → Blob (압축 없이 저장)
   return new Blob([...parts,...cen,e]);
 }
 
-/* ───────── 엑셀(일람표) 읽기 ───────── */
-const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
-const RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-const PNS='http://schemas.openxmlformats.org/package/2006/relationships';
-const txt=u8=>new TextDecoder().decode(u8);
-const xml=s=>new DOMParser().parseFromString(s,'application/xml');
-const kids=(el,tag)=>el?Array.from(el.getElementsByTagNameNS(NS,tag)):[];
-function colNum(L){ let c=0; for(const ch of L) c=c*26+ch.charCodeAt(0)-64; return c; }
-function colLet(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=(n-m-1)/26; } return s; }
-function addr(a){ const m=/^([A-Z]+)(\d+)$/.exec(a); return {r:+m[2], c:colNum(m[1])}; }
-function relPath(base,target){ if(target.startsWith('/')) return target.slice(1); const st=base.split('/'); st.pop(); for(const p of target.split('/')){ if(p==='..') st.pop(); else if(p!=='.') st.push(p); } return st.join('/'); }
-function relsOf(files,part){ const d=part.split('/'); const f=d.pop(); const rp=d.join('/')+'/_rels/'+f+'.rels'; return {path:rp, doc: files[rp]? xml(txt(files[rp])) : null}; }
-
-function fmtNum(v, code){
-  if(code===undefined || code==='General' || code===null){ return Number.isInteger(v)? String(v) : String(+v.toFixed(6)); }
-  const sec=code.split(';')[0].replace(/"[^"]*"|_.|\\./g,'');
-  const dm=/\.(0+)/.exec(sec); const dec=dm?dm[1].length:0; const comma=/#,##/.test(sec);
-  let s=v.toFixed(dec); if(comma){ const [i,f]=s.split('.'); s=i.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(f?'.'+f:''); }
-  return s+(/%/.test(sec)?'%':'');
-}
-async function parseXlsx(buf){
-  const files=await unzip(buf);
-  const wb=xml(txt(files['xl/workbook.xml']));
-  const sh=kids(wb,'sheet')[0]; const rid=sh.getAttributeNS(RNS,'id');
-  const wrel=relsOf(files,'xl/workbook.xml').doc;
-  const target=Array.from(wrel.getElementsByTagNameNS(PNS,'Relationship')).find(r=>r.getAttribute('Id')===rid).getAttribute('Target');
-  const sheetPath=relPath('xl/workbook.xml',target);
-  const ss=files['xl/sharedStrings.xml']? kids(xml(txt(files['xl/sharedStrings.xml'])),'si').map(si=>kids(si,'t').map(t=>t.textContent).join('')) : [];
-  // 서식
-  const st=files['xl/styles.xml']? xml(txt(files['xl/styles.xml'])) : null;
-  const numFmts={1:'0',2:'0.00',3:'#,##0',4:'#,##0.00',9:'0%',10:'0.00%'};
-  kids(st,'numFmt').forEach(n=>numFmts[n.getAttribute('numFmtId')]=n.getAttribute('formatCode'));
-  const fonts=kids(kids(st,'fonts')[0],'font').map(f=>{ const g=t=>kids(f,t)[0]; const bv=g('b'); return {sz:+(g('sz')?.getAttribute('val')||11), b: !!bv && bv.getAttribute('val')!=='false' && bv.getAttribute('val')!=='0', name:g('name')?.getAttribute('val')||'', color:(g('color')?.getAttribute('rgb')||'')}; });
-  const borders=kids(kids(st,'borders')[0],'border').map(b=>{ const o={}; for(const s of ['left','right','top','bottom']){ const e=kids(b,s)[0]; o[s]=e?.getAttribute('style')||''; } return o; });
-  const xfs=kids(kids(st,'cellXfs')[0],'xf').map(x=>{ const a=kids(x,'alignment')[0]; return {font:+(x.getAttribute('fontId')||0), border:+(x.getAttribute('borderId')||0), fmt:x.getAttribute('numFmtId')||'0', h:a?.getAttribute('horizontal')||'', v:a?.getAttribute('vertical')||'', wrap:a?.getAttribute('wrapText')==='true'||a?.getAttribute('wrapText')==='1'}; });
-  // 시트
-  const sd=xml(txt(files[sheetPath]));
-  const cells={}; let maxR=0, maxC=0;
-  kids(sd,'c').forEach(c=>{
-    const a=addr(c.getAttribute('r')); const t=c.getAttribute('t'); const s=+(c.getAttribute('s')||0);
-    const vEl=kids(c,'v')[0]; let val=null;
-    if(t==='s') val=ss[+vEl.textContent]; else if(t==='inlineStr') val=kids(c,'t').map(x=>x.textContent).join(''); else if(t==='str') val=vEl?vEl.textContent:''; else if(t==='b') val=vEl?.textContent==='1'; else if(vEl) val=+vEl.textContent;
-    const xf=xfs[s]||xfs[0]||{font:0,border:0,fmt:'0'};
-    let disp = val===null? '' : (typeof val==='number'? fmtNum(val, numFmts[xf.fmt]) : String(val));
-    cells[c.getAttribute('r')]={r:a.r,c:a.c,val,disp,xf};
-    if(val!==null && val!=='' ){ maxR=Math.max(maxR,a.r); maxC=Math.max(maxC,a.c); }
-    if(xf && borders[xf.border] && Object.values(borders[xf.border]).some(Boolean)){ maxR=Math.max(maxR,a.r); maxC=Math.max(maxC,a.c); }
-  });
-  const cols={}; kids(sd,'col').forEach(c=>{ for(let i=+c.getAttribute('min');i<=+c.getAttribute('max');i++) cols[i]=+c.getAttribute('width'); });
-  const fmt=kids(sd,'sheetFormatPr')[0]; const defH=+(fmt?.getAttribute('defaultRowHeight')||15), defW=+(fmt?.getAttribute('defaultColWidth')||8.43);
-  const rows={}; kids(sd,'row').forEach(r=>{ if(r.getAttribute('ht')) rows[+r.getAttribute('r')]=+r.getAttribute('ht'); });
-  const merges=kids(sd,'mergeCell').map(m=>{ const [a,b]=m.getAttribute('ref').split(':'); const A=addr(a), B=addr(b||a); return {r1:A.r,c1:A.c,r2:B.r,c2:B.c,ref:m.getAttribute('ref')}; });
-  merges.forEach(g=>{ if(cells[colLet(g.c1)+g.r1]?.val!=null){ maxC=Math.max(maxC,g.c2); maxR=Math.max(maxR,g.r2); } });
-  return {files, sheetPath, cells, cols, rows, defH, defW, merges, maxR, maxC, fonts, borders};
-}
-const cv=(x,r,c)=>x.cells[colLet(c)+r];
-function model(x){
-  // 머리글 행: '성명'과 '비고'가 있는 행
-  let hr=0; const H={};
-  for(let r=1;r<=Math.min(60,x.maxR) && !hr;r++){
-    const m={}; for(let c=1;c<=x.maxC;c++){ const v=cv(x,r,c)?.val; if(typeof v==='string') m[v.replace(/\s+/g,'')]=c; }
-    if(m['성명'] && m['비고']){ hr=r; Object.assign(H,m); }
-  }
-  if(!hr) throw new Error("'성명'과 '비고'가 있는 머리글 행을 찾지 못했습니다. 나이스 수행평가 일람표가 맞는지 확인하세요.");
-  const cNo=+Object.entries(H).find(([k])=>k.includes('번호'))?.[1] || 2, cNm=H['성명'], cBg=H['비고'], cSum=H['합계'];
-  const end=cSum||cBg; const cats=[];
-  for(let c=cNm+1;c<end;c++){ const v=cv(x,hr,c)?.val; if(typeof v==='string' && v.trim()){
-      const lines=v.split('\n').map(s=>s.trim()).filter(Boolean);
-      const title=lines.filter(l=>!/^\(/.test(l) && !/%|만점/.test(l)).join(' ') || lines[0];
-      const mm=/만점\s*([\d.]+)/.exec(v); cats.push({c, title, max: mm? +mm[1] : null}); } }
-  const students=[];
-  for(let r=hr+1;r<=x.maxR;r++){
-    const no=cv(x,r,cNo)?.val; if(typeof no!=='string' || !/^\d+\/\d+$/.test(no.trim())) break;
-    const sc=cats.map(k=>cv(x,r,k.c)); const skipV=sc.find(s=>typeof s?.val==='string' && s.val.trim());
-    students.push({row:r, no:no.trim(), name:String(cv(x,r,cNm)?.val??''), scores:sc.map(s=>s?s.disp:''), total: cSum? (cv(x,r,cSum)?.disp??'') : '', skip:!!skipV, skipReason: skipV? skipV.val.trim():''});
-  }
-  let info='';
-  for(let r=1;r<hr;r++) for(let c=1;c<=x.maxC;c++){ const v=cv(x,r,c)?.val; if(typeof v==='string' && v.includes('학년도')) info=v.replace(/\s+/g,' ').trim(); }
-  return {hr, cNo, cNm, cBg, cSum, cats, students, info};
-}
-
 /* ───────── 저장소 (IndexedDB) ───────── */
 let DB;
 function dbOpen(){ return new Promise((ok,no)=>{ const q=indexedDB.open('suhaeng-sign',1); q.onupgradeneeded=()=>{ const d=q.result; d.createObjectStore('files',{keyPath:'name'}); d.createObjectStore('signs',{keyPath:'key'}); }; q.onsuccess=()=>{ DB=q.result; ok(); }; q.onerror=()=>no(q.error); }); }
@@ -389,18 +267,18 @@ let cur=null, idx=0, signs={};   // signs: row → {status, png, memo, time}
 async function loadAll(){
   await dbOpen();
   const fl=await dbAll('files'); const sg=await dbAll('signs');
-  for(const f of fl){ try{ CLS[f.name]=await loadClass(f.name, f.buf); }catch(e){ console.warn(f.name,e); } }
+  for(const f of fl){ if(!/\.pdf$/i.test(f.name)) continue; try{ CLS[f.name]=await loadClass(f.name, f.buf); }catch(e){ console.warn(f.name,e); } }
   window._allSigns=sg; renderHome();
 }
 async function loadClass(name, buf){
-  if(/\.pdf$/i.test(name)){ const pr=await pdfRead(buf); return {name, buf, kind:'pdf', m:pdfModel(pr)}; }
-  const x=await parseXlsx(buf); return {name, buf, kind:'xlsx', x, m:model(x)};
+  if(!/\.pdf$/i.test(name)) throw new Error('PDF 파일이 아닙니다.');
+  const pr=await pdfRead(buf); return {name, buf, kind:'pdf', m:pdfModel(pr)};
 }
-const baseName=n=>n.replace(/\.(xlsx|pdf)$/i,'');
+const baseName=n=>n.replace(/\.pdf$/i,'');
 function signsOf(name){ const o={}; (window._allSigns||[]).filter(s=>s.file===name).forEach(s=>o[s.row]=s); return o; }
 async function addFiles(list){
   for(const f of list){
-    if(!/\.(xlsx|pdf)$/i.test(f.name)){ toast(f.name+': PDF 또는 xlsx 파일만 올릴 수 있습니다.'); continue; }
+    if(!/\.pdf$/i.test(f.name)){ toast(f.name+': 나이스 일람표 PDF만 올릴 수 있습니다.', 3000); continue; }
     try{
       const buf=await f.arrayBuffer(); const c=await loadClass(f.name, buf);
       if(CLS[f.name] && !confirm(f.name+' 파일이 이미 있습니다. 새 파일로 바꿀까요? (받은 서명은 학생 순서대로 그대로 남습니다)')) continue;
@@ -418,7 +296,7 @@ function renderHome(){
     const done=c.m.students.filter(s=>!s.skip && sg[s.row]).length;
     const d=document.createElement('div'); d.className='cls';
     d.innerHTML='<div class="nm"></div><div class="sub"></div><div class="bar"><i></i></div><div class="row"><button class="primary">서명 시작 ▶</button><button class="danger">삭제</button></div>';
-    d.querySelector('.nm').textContent=baseName(n)+(c.kind==='pdf'?'  (PDF)':'  (엑셀)');
+    d.querySelector('.nm').textContent=baseName(n);
     d.querySelector('.sub').textContent=c.m.info+' · 서명 '+done+' / '+tot+'명';
     d.querySelector('i').style.width=(tot? done/tot*100:0)+'%';
     d.querySelector('.primary').onclick=()=>openClass(n);
@@ -437,12 +315,6 @@ function openClass(n){
   cur=CLS[n]; signs=signsOf(n);
   const first=cur.m.students.findIndex(s=>!s.skip && !signs[s.row]);
   $('tTitle').textContent=baseName(n);
-  const isPdf=cur.kind==='pdf';
-  $('btnPdf').textContent= isPdf? '서명 PDF 저장' : '나이스 PDF 골라 저장';
-  $('btnPdfPrint').textContent= isPdf? '서명 PDF 인쇄' : '나이스 PDF 골라 인쇄';
-  $('btnPdf').title= isPdf? '올린 나이스 PDF의 비고 칸에 서명을 넣어 파일로 저장합니다' : '나이스에서 받은 이 반 일람표 PDF를 고르면 비고 칸에 서명을 넣어 저장합니다';
-  $('btnPdfPrint').title= isPdf? '올린 나이스 PDF의 비고 칸에 서명을 넣어 바로 인쇄합니다' : '나이스에서 받은 이 반 일람표 PDF를 고르면 비고 칸에 서명을 넣어 인쇄합니다';
-  $('btnXlsx').style.display= isPdf? 'none' : ''; $('btnPrint').style.display= isPdf? 'none' : '';
   const sel=$('pick'); sel.innerHTML='';
   cur.m.students.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=s.no+' '+s.name+(s.skip?' ('+s.skipReason+')':''); o.disabled=s.skip; sel.appendChild(o); });
   show('sSign'); pad.resize();
@@ -459,7 +331,7 @@ function updProg(){
 function go(i){
   if(i<0 || i>=cur.m.students.length) return;
   idx=i; const s=cur.m.students[i]; $('pick').value=i;
-  $('sNm').textContent=s.name; $('sNo').textContent=s.no.replace('/','반 ')+'번'+(s.absent?' · 결시: '+s.absent:'');
+  $('sNm').textContent=s.name; $('ghostName').textContent=s.name; fitGhost(); $('sNo').textContent=s.no.replace('/','반 ')+'번'+(s.absent?' · 결시: '+s.absent:'');
   const st=statusOf(s); const S=$('sStat'); S.className='stat '+st; S.textContent=STLAB(s)||'';
   const box=$('sScores'); box.innerHTML='';
   cur.m.cats.forEach((c,k)=>{ const d=document.createElement('div'); d.className='sc'; d.innerHTML='<div class="t"></div><div class="v"></div>'; d.querySelector('.t').textContent=c.title;
@@ -547,6 +419,9 @@ async function clearClass(){
   window._allSigns=(window._allSigns||[]).filter(x=>x.file!==cur.name); signs={}; closeM('mAll'); go(cur.m.students.findIndex(s=>!s.skip)); toast('이 반의 서명 기록을 모두 지웠습니다.', 2500);
 }
 
+function fitGhost(){ const w=$('ghost').clientWidth, hgt=$('ghost').clientHeight, n=Math.max(2,($('ghostName').textContent||'').length);
+  $('ghostName').style.fontSize=Math.max(28, Math.min(hgt*0.5, w*0.8/(n*1.15)))+'px'; }
+window.addEventListener('resize', ()=>{ if($('sSign').classList.contains('on')) fitGhost(); });
 /* ───────── 서명 패드 (펜 필압) ───────── */
 const pad=(function(){
   const c=$('pad'), g=c.getContext('2d'); let S=[], cs=null, dpr=1;
@@ -581,11 +456,6 @@ function dataU8(du){ const b=atob(du.split(',')[1]); const u=new Uint8Array(b.le
 const stem=()=>baseName(cur.name);
 const safe=s=>String(s).replace(/[\\/:*?"<>|]/g,'_');
 const loadImg=src=>new Promise(ok=>{ const i=new Image(); i.onload=()=>ok(i); i.src=src; });
-async function fitPng(du, w, h){  // 칸 비율에 맞춰 가운데 정렬한 PNG
-  const im=await loadImg(du); const o=document.createElement('canvas'); o.width=Math.round(w*4); o.height=Math.round(h*4);
-  const k=Math.min(o.width/im.width, o.height/im.height); const g=o.getContext('2d'); g.drawImage(im,(o.width-im.width*k)/2,(o.height-im.height*k)/2,im.width*k,im.height*k);
-  return o.toDataURL('image/png');
-}
 
 /* 서명 그림 zip */
 async function downloadZip(){
@@ -596,75 +466,6 @@ async function downloadZip(){
   if(log.length===1){ toast('아직 받은 서명이 없습니다.'); return; }
   f['서명기록.csv']=new TextEncoder().encode('﻿'+log.join('\r\n'));
   saveBlob(zip(f), stem()+' 서명.zip');
-}
-
-/* 엑셀: 원본 일람표 비고 칸에 서명 그림 넣기 */
-const colPx=w=>Math.floor(w*7+5);
-async function downloadXlsx(){
-  const x=cur.x, m=cur.m; const files=Object.assign({}, x.files);
-  const ser=d=>new TextEncoder().encode(new XMLSerializer().serializeToString(d));
-  const sd=xml(txt(files[x.sheetPath])); const ws=sd.documentElement;
-  // 1) 서로 겹친 병합 범위 정리 (나이스 파일은 쪽번호 칸 병합이 겹쳐 엑셀이 열지 못함)
-  const mc=kids(sd,'mergeCells')[0];
-  if(mc){ const keep=[]; kids(mc,'mergeCell').map(e=>{ const [a,b]=e.getAttribute('ref').split(':'); const A=addr(a),B=addr(b||a); return {e,r1:A.r,c1:A.c,r2:B.r,c2:B.c}; })
-    .sort((p,q)=>p.r1-q.r1||p.c1-q.c1).forEach(k=>{ if(keep.some(o=>!(k.r2<o.r1||k.r1>o.r2||k.c2<o.c1||k.c1>o.c2))) mc.removeChild(k.e); else keep.push(k); });
-    mc.setAttribute('count', kids(mc,'mergeCell').length); }
-  // 2) A4 한 쪽에 맞춤
-  kids(sd,'rowBreaks').forEach(e=>e.remove()); kids(sd,'colBreaks').forEach(e=>e.remove());
-  let sp=kids(sd,'sheetPr')[0]; if(!sp){ sp=sd.createElementNS(NS,'sheetPr'); ws.insertBefore(sp, ws.firstElementChild); }
-  let pu=kids(sp,'pageSetUpPr')[0]; if(!pu){ pu=sd.createElementNS(NS,'pageSetUpPr'); sp.appendChild(pu); } pu.setAttribute('fitToPage','1');
-  const ps=kids(sd,'pageSetup')[0]; if(ps){ ps.setAttribute('fitToWidth','1'); ps.setAttribute('fitToHeight','1'); }
-  const pm=kids(sd,'pageMargins')[0];
-  if(pm && !kids(sd,'printOptions')[0]){ const po=sd.createElementNS(NS,'printOptions'); po.setAttribute('horizontalCentered','1'); ws.insertBefore(po,pm); }
-  // 3) 이의·사유 학생은 비고 칸에 글자
-  const rowEl={}; kids(sd,'row').forEach(r=>rowEl[+r.getAttribute('r')]=r);
-  for(const s of m.students){ const r=signs[s.row]; if(!r || r.status==='동의') continue;
-    const ref=colLet(m.cBg)+s.row; let c=kids(sd,'c').find(e=>e.getAttribute('r')===ref);
-    if(!c){ c=sd.createElementNS(NS,'c'); c.setAttribute('r',ref); const re=rowEl[s.row]; const after=kids(re,'c').find(e=>addr(e.getAttribute('r')).c>m.cBg); re.insertBefore(c, after||null); }
-    while(c.firstChild) c.removeChild(c.firstChild); c.setAttribute('t','inlineStr'); const is=sd.createElementNS(NS,'is'), t=sd.createElementNS(NS,'t'); t.textContent=noteText(r); is.appendChild(t); c.appendChild(is); }
-  // 4) 그림
-  const signed=m.students.filter(s=>signs[s.row]?.status==='동의' && signs[s.row].png);
-  if(signed.length){
-    const srel=relsOf(files,x.sheetPath); let srd=srel.doc;
-    if(!srd){ srd=xml('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="'+PNS+'"/>'); }
-    let dEl=kids(sd,'drawing')[0], drawPath;
-    if(dEl){ const id=dEl.getAttributeNS(RNS,'id'); drawPath=relPath(x.sheetPath, Array.from(srd.getElementsByTagNameNS(PNS,'Relationship')).find(r=>r.getAttribute('Id')===id).getAttribute('Target')); }
-    else { let k=1; while(files['xl/drawings/drawing'+k+'.xml']) k++; drawPath='xl/drawings/drawing'+k+'.xml';
-      const nid='rIdSig'+Date.now(); const rel=srd.createElementNS(PNS,'Relationship'); rel.setAttribute('Id',nid); rel.setAttribute('Type',RNS+'/drawing'); rel.setAttribute('Target','../drawings/drawing'+k+'.xml'); srd.documentElement.appendChild(rel);
-      dEl=sd.createElementNS(NS,'drawing'); dEl.setAttributeNS(RNS,'r:id',nid); const before=['legacyDrawing','legacyDrawingHF','picture','oleObjects','controls','webPublishItems','tableParts','extLst'].map(t=>kids(sd,t)[0]).find(Boolean); ws.insertBefore(dEl,before||null); }
-    files[srel.path]=ser(srd);
-    const drel=relsOf(files,drawPath); let drd=drel.doc||xml('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="'+PNS+'"/>');
-    let dd=files[drawPath]? xml(txt(files[drawPath])) : null; const XDR='http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing';
-    if(!dd || !dd.documentElement || dd.documentElement.localName!=='wsDr') dd=xml('<xdr:wsDr xmlns:xdr="'+XDR+'"/>');
-    const root=dd.documentElement; let anchors='';
-    // 비고 칸(병합 범위) 크기
-    for(const [k,s] of signed.entries()){
-      const mg=x.merges.find(g=>s.row>=g.r1&&s.row<=g.r2&&m.cBg>=g.c1&&m.cBg<=g.c2) || {r1:s.row,c1:m.cBg,r2:s.row,c2:m.cBg};
-      let wpx=0; for(let c=mg.c1;c<=mg.c2;c++) wpx+=colPx(x.cols[c]??x.defW); let hpt=0; for(let r=mg.r1;r<=mg.r2;r++) hpt+=(x.rows[r]??x.defH);
-      const hpx=hpt*96/72, padx=3, pady=1.5; const lastW=colPx(x.cols[mg.c2]??x.defW), lastH=(x.rows[mg.r2]??x.defH);
-      const png=await fitPng(signs[s.row].png, wpx-2*padx, hpx-2*pady);
-      const mname='xl/media/sign_'+s.row+'_'+Date.now()%100000+'.png'; files[mname]=dataU8(png);
-      const rid='rIdS'+s.row; const rel=drd.createElementNS(PNS,'Relationship'); rel.setAttribute('Id',rid); rel.setAttribute('Type',RNS+'/image'); rel.setAttribute('Target','../media/'+mname.split('/').pop()); drd.documentElement.appendChild(rel);
-      const E=9525, id=1000+k;
-      anchors+='<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>'+(mg.c1-1)+'</xdr:col><xdr:colOff>'+padx*E+'</xdr:colOff><xdr:row>'+(mg.r1-1)+'</xdr:row><xdr:rowOff>'+Math.round(pady*E)+'</xdr:rowOff></xdr:from>'+
-        '<xdr:to><xdr:col>'+(mg.c2-1)+'</xdr:col><xdr:colOff>'+(lastW-padx)*E+'</xdr:colOff><xdr:row>'+(mg.r2-1)+'</xdr:row><xdr:rowOff>'+Math.round((lastH*96/72-pady)*E)+'</xdr:rowOff></xdr:to>'+
-        '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'+id+'" name="서명 '+esc(s.no)+'"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'+
-        '<xdr:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'+
-        '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+Math.round((wpx-2*padx)*E)+'" cy="'+Math.round((hpx-2*pady)*E)+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>';
-    }
-    const inner=Array.from(root.childNodes).map(n=>new XMLSerializer().serializeToString(n)).join('');
-    const drawXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="'+XDR+'" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="'+RNS+'">'+inner.replace(/ xmlns:xdr="[^"]*"/g,'')+anchors+'</xdr:wsDr>';
-    files[drawPath]=new TextEncoder().encode(drawXml); files[drel.path]=ser(drd);
-    // 콘텐츠 형식
-    const ct=xml(txt(files['[Content_Types].xml'])); const CT=ct.documentElement.namespaceURI;
-    const has=(tag,att,val)=>Array.from(ct.getElementsByTagNameNS(CT,tag)).some(e=>(e.getAttribute(att)||'').toLowerCase()===val.toLowerCase());
-    if(!has('Default','Extension','png')){ const e=ct.createElementNS(CT,'Default'); e.setAttribute('Extension','png'); e.setAttribute('ContentType','image/png'); ct.documentElement.insertBefore(e, ct.documentElement.firstChild); }
-    if(!has('Override','PartName','/'+drawPath)){ const e=ct.createElementNS(CT,'Override'); e.setAttribute('PartName','/'+drawPath); e.setAttribute('ContentType','application/vnd.openxmlformats-officedocument.drawing+xml'); ct.documentElement.appendChild(e); }
-    files['[Content_Types].xml']=ser(ct);
-  }
-  files[x.sheetPath]=ser(sd);
-  saveBlob(zip(files), stem()+'(서명).xlsx');
-  toast('엑셀을 내려받았습니다: 서명 '+signed.length+'명', 2500);
 }
 
 /* ───────── 나이스 PDF 읽기·서명 넣기 ─────────
@@ -826,10 +627,8 @@ let pdfMode='save';
 async function pdfButton(mode){
   pdfMode=mode||'save';
   try{
-    if(cur.kind==='pdf'){   // PDF로 올린 반: 올린 PDF에 바로 넣기
-      const pr=await pdfRead(cur.buf); const r=await pdfStamp(pr, cur.m.students, cur.m.rowRects);
-      deliver(r, stem()+'(서명).pdf');
-    } else $('pdfIn').click();   // 엑셀로 올린 반: 같은 반 나이스 PDF를 골라야 함
+    const pr=await pdfRead(cur.buf); const r=await pdfStamp(pr, cur.m.students, cur.m.rowRects);
+    deliver(r, stem()+'(서명).pdf');
   }catch(err){ alert('PDF에 서명을 넣지 못했습니다.\n'+err.message); }
 }
 function deliver(r, name){
@@ -847,61 +646,6 @@ function printPdf(blob, name, count){
   f.src=url; document.body.appendChild(f);
   toast('인쇄 창을 엽니다: 서명 '+count+'명', 2500);
 }
-$('pdfIn').addEventListener('change', async e=>{
-  const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  try{
-    const pr=await pdfRead(await f.arrayBuffer()); const pm=pdfModel(pr); const N=cur.m.students.length;
-    const names=cur.m.students.map(s=>s.name.replace(/\s+/g,'')); const pn=pm.students.map(s=>s.name.replace(/\s+/g,''));
-    if(pm.students.length!==N || names.some((n,i)=>n!==pn[i])){
-      const hit=names.filter((n,i)=>n===pn[i]).length;
-      if(!confirm('PDF의 학생 명단이 이 반 엑셀과 다릅니다(같은 자리 이름 '+hit+' / '+N+'명 일치). 다른 반 PDF일 수 있습니다.\n그래도 서명을 넣을까요?')) return; }
-    const r=await pdfStamp(pr, cur.m.students, pm.rowRects.length>=N? pm.rowRects : pdfNoteCol(pr,N+1).slice(1,1+N));
-    deliver(r, f.name.replace(/\.pdf$/i,'')+'(서명).pdf');
-  }catch(err){ alert('PDF에 서명을 넣지 못했습니다.\n'+err.message); }
-});
-
-/* ───────── 인쇄 미리보기 (일람표 모양 그대로) ───────── */
-function sheetHtml(){
-  const x=cur.x, m=cur.m; const R=x.maxR, C=x.maxC;
-  const covered=new Set(), span={};
-  x.merges.forEach(g=>{ if(covered.has(g.r1+','+g.c1)) return; span[g.r1+','+g.c1]=g; for(let r=g.r1;r<=g.r2;r++) for(let c=g.c1;c<=g.c2;c++) if(r!==g.r1||c!==g.c1) covered.add(r+','+c); });
-  const bw=s=>!s?'':(/medium|thick|double/.test(s)?'1.6px solid #000':'0.8px solid #000');
-  let wTot=0; let h='<colgroup>'; for(let c=1;c<=C;c++){ const w=colPx(x.cols[c]??x.defW); wTot+=w; h+='<col style="width:'+w+'px">'; } h+='</colgroup>';
-  let hTot=0;
-  for(let r=1;r<=R;r++){
-    const hp=(x.rows[r]??x.defH)*96/72; hTot+=hp; h+='<tr style="height:'+hp.toFixed(2)+'px">';
-    for(let c=1;c<=C;c++){
-      if(covered.has(r+','+c)) continue;
-      const g=span[r+','+c]; const cell=cv(x,r,c); const xf=cell?.xf;
-      // 병합 범위의 테두리: 바깥쪽 셀들의 테두리를 모음
-      const bd={left:'',right:'',top:'',bottom:''};
-      const r2=g?g.r2:r, c2=g?g.c2:c;
-      const B=(rr,cc)=>{ const q=cv(x,rr,cc); return q? (x.borders[q.xf.border]||{}) : {}; };
-      for(let rr=r;rr<=r2;rr++){ bd.left=bd.left||B(rr,c).left; bd.right=bd.right||B(rr,c2).right||B(rr,c2+1).left; }
-      for(let cc=c;cc<=c2;cc++){ bd.top=bd.top||B(r,cc).top||B(r-1,cc).bottom; bd.bottom=bd.bottom||B(r2,cc).bottom||B(r2+1,cc).top; }
-      let st='border-left:'+(bw(bd.left)||'0')+';border-right:'+(bw(bd.right)||'0')+';border-top:'+(bw(bd.top)||'0')+';border-bottom:'+(bw(bd.bottom)||'0')+';';
-      const f=xf? x.fonts[xf.font] : null; if(f){ st+='font-size:'+(f.sz*96/72).toFixed(1)+'px;'+(f.b?'font-weight:700;':'')+(/^FFFFFF$|^FFFFFFFF$/i.test(f.color)?'color:#fff;':''); }
-      let ha=xf?.h; if(!ha) ha= typeof cell?.val==='number'? 'right':'left'; if(ha==='centerContinuous') ha='center'; st+='text-align:'+(ha==='general'?'left':ha)+';';
-      const va=xf?.v||'bottom'; st+='vertical-align:'+(va==='center'?'middle':va==='top'?'top':'bottom')+';';
-      let content=esc(cell?.disp||'').replace(/\n/g,'<br>');
-      const stu=(c===m.cBg)? m.students.find(s=>s.row===r) : null;
-      if(stu && signs[stu.row]){ const sgn=signs[stu.row]; content= sgn.status==='동의'&&sgn.png ? '<img src="'+sgn.png+'" alt="">' : '<span>'+esc(noteText(sgn))+'</span>'; st+='text-align:center;vertical-align:middle;padding:1px;'; }
-      const cls=(xf?.wrap||/\n/.test(cell?.disp||''))?' class="wrap"':'';
-      h+='<td'+cls+(g?' colspan="'+(g.c2-g.c1+1)+'" rowspan="'+(g.r2-g.r1+1)+'"':'')+' style="'+st+'">'+content+'</td>';
-    }
-    h+='</tr>';
-  }
-  return {html:'<table class="xl" style="width:'+wTot+'px">'+h+'</table>', w:wTot, h:hTot};
-}
-function openPrint(){
-  const t=sheetHtml(); const pg=document.createElement('div'); pg.className='page';
-  const mmPx=96/25.4, PW=210*mmPx, PH=297*mmPx, M=8*mmPx;
-  const k=Math.min((PW-2*M)/t.w, (PH-2*M)/t.h, 1.25);
-  pg.innerHTML='<div class="sheet" style="transform:scale('+k+');left:'+((PW-t.w*k)/2)+'px;top:'+M+'px">'+t.html+'</div>';
-  $('pages').innerHTML=''; $('pages').appendChild(pg); show('sPrint');
-}
-function closePrint(){ show('sSign'); pad.resize(); go(idx); }
-
 /* ───────── 시작 ───────── */
 const drop=$('drop');
 $('fileIn').addEventListener('change',e=>{ addFiles(Array.from(e.target.files)); e.target.value=''; });
