@@ -59,7 +59,6 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
 .who .no{font-size:20px;color:var(--sub);font-weight:600}
 .who .stat{margin-left:auto;font-size:14px;font-weight:700;border-radius:999px;padding:6px 14px}
 .stat.done{background:var(--green-soft);color:var(--green)}
-.stat.obj{background:var(--amber-soft);color:var(--amber)}
 .stat.wait{background:var(--gray-soft);color:var(--sub)}
 .stat.reason{background:#e8eaf6;color:#3949ab}
 .scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
@@ -76,13 +75,12 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
   background:linear-gradient(to top, transparent 22%, #c7c7cc 22%, #c7c7cc calc(22% + 1px), transparent calc(22% + 1px))}
 /* 서명 칸 뒤에 깔리는 흐린 안내 글씨(서명 그림·PDF에는 들어가지 않음) */
 .ghost{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;border-radius:12px}
-.ghost .gname{color:#e3e3e8;font-weight:700;letter-spacing:.15em;white-space:nowrap;font-family:"Malgun Gothic","맑은 고딕",sans-serif}
+.ghost .gname{color:#e3e3e8;font-weight:700;letter-spacing:.03em;white-space:nowrap;font-family:"Malgun Gothic","맑은 고딕",sans-serif}
 .ghost .gtip{position:absolute;left:14px;top:10px;color:#aeaeb2;font-size:14px}
 .saved{position:absolute;inset:0;background:rgba(255,255,255,.96);border-radius:12px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .saved.on{display:flex}
 .saved img{max-height:62%;max-width:70%}
 .saved .lab{font-weight:700;color:var(--green)}
-.saved.obj .lab{color:var(--amber)}
 .saved.reason .lab{color:#3949ab}
 .bottom{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 22px 16px;max-width:1200px;width:100%;margin:0 auto;flex-wrap:wrap}
 #btnNext{font-size:20px;padding:14px 34px}
@@ -133,7 +131,6 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
 .st{background:var(--bg);border-radius:12px;padding:10px;text-align:left;font-weight:500;border:2px solid transparent}
 .st .n{font-size:12px;color:var(--sub)}.st .m{font-size:17px;font-weight:700}
 .st.done{border-color:#b7e1c4;background:var(--green-soft)}
-.st.obj{border-color:#f3cf94;background:var(--amber-soft)}
 .st.reason{border-color:#c5cae9;background:#e8eaf6}
 .st.skip{opacity:.45}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 20px;border-radius:12px;font-size:16px;display:none;z-index:20}
@@ -155,7 +152,7 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
   <div class="classes" id="classes"></div>
   <div class="help">
     <b>진행</b> 반을 고르면 1번 학생의 점수와 서명 칸이 바로 나옵니다. 학생이 서명하고 <b>저장하고 다음 ▶</b>(또는 Enter)을 누르면 다음 학생으로 넘어갑니다.
-    점수가 다르다는 학생은 <b>이의</b>로, 서명을 받을 수 없는 학생(결석·전출·자퇴 등)은 <b>서명 못 받음</b>으로 사유를 기록합니다(비고 칸에 그 글자가 들어감).
+    서명을 받을 수 없는 학생(결석·전출·자퇴 등)은 <b>서명 못 받음</b>으로 사유를 기록합니다(비고 칸에 그 글자가 들어감).
     그날 없는 학생은 <b>건너뛰기 · 다음에</b>를 누르면 비워 둔 채 넘어가고, 다음에 <b>서명 시작</b>을 누르면 남은 학생부터 이어집니다.<br>
     <b>결과</b> 반 화면의 <b>서명 PDF 저장</b>은 올린 나이스 PDF의 비고 칸에 서명을 넣어 파일로 저장하고, <b>서명 PDF 인쇄</b>는 바로 인쇄 창을 엽니다(쪽번호·학교 이름 등 원본 그대로).
     <b>서명 그림 받기</b>는 학생별 PNG를 zip으로 내려받습니다.<br>
@@ -192,7 +189,6 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
     <div class="row">
       <button onclick="move(-1)">◀ 이전</button>
       <select id="pick" onchange="go(+this.value)"></select>
-      <button class="warn" onclick="openObj()">점수가 달라요 (이의)</button>
       <button class="reasonbtn" onclick="openReason()">서명 못 받음 (결석·전출 등)</button>
     </div>
     <div class="row">
@@ -201,13 +197,6 @@ select{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1p
     </div>
   </div>
 </section>
-
-<div class="modal" id="mObj"><div class="dlg">
-  <h2>이의 신청</h2>
-  <div class="sub">어느 점수가 어떻게 다른지 적어 주세요(비워 둬도 됩니다). 일람표 비고 칸에는 '이의'로 들어갑니다.</div>
-  <textarea id="objMemo" placeholder="예: 논술 점수가 다른 것 같아요"></textarea>
-  <div class="row end"><button onclick="closeM('mObj')">취소</button><button class="warn" onclick="saveObj()">이의 기록하고 다음 ▶</button></div>
-</div></div>
 
 <div class="modal" id="mReason"><div class="dlg">
   <h2>서명을 받을 수 없는 학생</h2>
@@ -320,13 +309,13 @@ function openClass(n){
   show('sSign'); pad.resize();
   go(first<0? cur.m.students.findIndex(s=>!s.skip) : first);
 }
-function statusOf(s){ const r=signs[s.row]; return s.skip?'skip': !r? 'wait' : r.status==='동의'?'done' : r.status==='이의'?'obj' : 'reason'; }
+function statusOf(s){ const r=signs[s.row]; return s.skip?'skip': !r? 'wait' : r.status==='동의'?'done' : 'reason'; }
 // 비고 칸에 들어갈 글자 (서명이 아닌 경우)
-const noteText=r=> r.status==='이의'? '이의' : (r.memo||'사유');
-const STLAB=s=>{ const st=statusOf(s); return st==='reason'? signs[s.row].memo : {done:'서명 완료',obj:'이의',wait:'서명 전',skip:s.skipReason}[st]; };
+const noteText=r=> r.memo||'사유';
+const STLAB=s=>{ const st=statusOf(s); return st==='reason'? signs[s.row].memo : {done:'서명 완료',wait:'서명 전',skip:s.skipReason}[st]; };
 function updProg(){
-  const L=cur.m.students.filter(s=>!s.skip); const c=k=>L.filter(s=>statusOf(s)===k).length; const d=c('done'), o=c('obj'), r=c('reason');
-  $('tProg').innerHTML='서명 <b>'+d+'</b> / '+L.length+'명'+(o?' · 이의 '+o+'명':'')+(r?' · 사유 '+r+'명':'')+' · 남은 '+(L.length-d-o-r)+'명';
+  const L=cur.m.students.filter(s=>!s.skip); const c=k=>L.filter(s=>statusOf(s)===k).length; const d=c('done'), r=c('reason');
+  $('tProg').innerHTML='서명 <b>'+d+'</b> / '+L.length+'명'+(r?' · 사유 '+r+'명':'')+' · 남은 '+(L.length-d-r)+'명';
 }
 function go(i){
   if(i<0 || i>=cur.m.students.length) return;
@@ -340,8 +329,8 @@ function go(i){
   if(cur.m.cSum){ const t=document.createElement('div'); t.className='sc total'; t.innerHTML='<div class="t">합계</div><div class="v">'+esc(nice(s.total))+(tmax?' <small>/ '+trim0(tmax)+'</small>':'')+'</div>'; box.appendChild(t); }
   pad.clear();
   const r=signs[s.row]; const sv=$('saved');
-  if(r){ sv.classList.add('on'); sv.classList.toggle('obj', r.status==='이의'); sv.classList.toggle('reason', r.status==='사유');
-    $('savedLab').textContent= r.status==='동의'? '서명 완료 ('+r.time+')' : r.status==='이의'? '이의 있음 ('+r.time+')'+(r.memo?' · '+r.memo:'') : '서명 못 받음: '+r.memo+' ('+r.time+')';
+  if(r){ sv.classList.add('on'); sv.classList.toggle('reason', r.status==='사유');
+    $('savedLab').textContent= r.status==='동의'? '서명 완료 ('+r.time+')' : '서명 못 받음: '+r.memo+' ('+r.time+')';
     const im=$('savedImg'); if(r.png){ im.src=r.png; im.style.display=''; } else im.style.display='none'; }
   else sv.classList.remove('on');
   $('btnNext').textContent = r? '다음 ▶' : '저장하고 다음 ▶';
@@ -389,8 +378,6 @@ async function saveReason(){
   const t=($('reasonTxt').value.trim()||reasonPick); if(!t){ toast('사유를 고르거나 적어 주세요.'); return; }
   await record('사유','',t); closeM('mReason'); toNext();
 }
-function openObj(){ $('objMemo').value=''; $('mObj').classList.add('on'); setTimeout(()=>$('objMemo').focus(),50); }
-async function saveObj(){ await record('이의', '', $('objMemo').value.trim()); closeM('mObj'); toNext(); }
 document.addEventListener('keydown', e=>{
   if(!$('sSign').classList.contains('on') || document.querySelector('.modal.on')) return;
   if(e.key==='Enter'){ e.preventDefault(); saveNext(); }
@@ -414,13 +401,13 @@ async function clearOne(){
 }
 async function clearClass(){
   const n=Object.keys(signs).length; if(!n){ toast('이 반에는 아직 받은 서명이 없습니다.'); return; }
-  if(!confirm(baseName(cur.name)+'의 서명·이의·사유 기록 '+n+'건을 모두 지울까요?\n되돌릴 수 없습니다. (필요하면 먼저 [서명 그림 받기]로 받아 두세요)\n올린 일람표 파일과 점수는 그대로 남습니다.')) return;
+  if(!confirm(baseName(cur.name)+'의 서명·사유 기록 '+n+'건을 모두 지울까요?\n되돌릴 수 없습니다. (필요하면 먼저 [서명 그림 받기]로 받아 두세요)\n올린 일람표 파일과 점수는 그대로 남습니다.')) return;
   for(const s of cur.m.students) await dbDel('signs', cur.name+'|'+s.row);
   window._allSigns=(window._allSigns||[]).filter(x=>x.file!==cur.name); signs={}; closeM('mAll'); go(cur.m.students.findIndex(s=>!s.skip)); toast('이 반의 서명 기록을 모두 지웠습니다.', 2500);
 }
 
 function fitGhost(){ const w=$('ghost').clientWidth, hgt=$('ghost').clientHeight, n=Math.max(2,($('ghostName').textContent||'').length);
-  $('ghostName').style.fontSize=Math.max(28, Math.min(hgt*0.5, w*0.8/(n*1.15)))+'px'; }
+  $('ghostName').style.fontSize=Math.max(24, Math.min(110, hgt*0.3, w*0.5/(n*1.05)))+'px'; }
 window.addEventListener('resize', ()=>{ if($('sSign').classList.contains('on')) fitGhost(); });
 /* ───────── 서명 패드 (펜 필압) ───────── */
 const pad=(function(){
